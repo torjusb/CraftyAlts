@@ -1,0 +1,24 @@
+## Interface: 30300
+
+## Title: CraftyAlts
+## Notes: Easy access to alts professions 
+## Author: Nifty
+## Version: Alpha
+
+## SavedVariables: CraftyAltsDB
+
+## OptionalDeps: tekDebug, tekErr
+
+## LoadManagers: AddonLoader
+## X-LoadOn-Always: delayed
+
+LibStub.lua
+tekKonfigAboutPanel.lua
+
+Locale.lua
+Database.lua
+Slashcommand.lua
+UtilityFunctions.lua
+EventDispatcher.lua
+
+CraftyAlts.lua
