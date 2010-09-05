@@ -3,7 +3,7 @@
 ## Title: CraftyAlts
 ## Notes: Easy access to alts professions 
 ## Author: Nifty
-## Version: Alpha
+## Version: 1.0
 
 ## SavedVariables: CraftyAltsDB
 
@@ -15,9 +15,7 @@
 LibStub.lua
 tekKonfigAboutPanel.lua
 
-Locale.lua
 Database.lua
-Slashcommand.lua
 UtilityFunctions.lua
 EventDispatcher.lua
 
