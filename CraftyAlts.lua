@@ -1,10 +1,4 @@
 --[[
-	TODO: Better scanProfessions function
-	TODO: Better createButtons function
-	TODO: Hide on the edge, show on mouseEnter (needs improvement)
-]]
-
---[[
 --	@ Setup
 --]]
 
@@ -82,6 +76,9 @@ local button_OnLeave = function (self)
 	GameTooltip:Hide()
 end
 
+--[[
+--	@ Functions
+--]]
 
 function CAframe:slideIn()
 	CAframe:ClearAllPoints()
@@ -93,13 +90,13 @@ end
 function CAframe:createButtons()
 	local characters = ns.db[ns.factionrealm]
 	local i = 1
+	
+	self:Show()
 		
 	for char, profs in pairs(characters) do
-		ns.Debug(char, profs)
 		if profs then
 			-- create buttons
 			for prof, info in pairs(profs) do
-				ns.Debug(prof, info)
 				local button = CreateFrame("button")
 				
 				button:SetHeight(16)
@@ -139,16 +136,18 @@ function CAframe:createButtons()
 		end
 	end
 	
-	
-	-- Calculate new width of CAFrame
-	self.newWidth = 16 * (i - 1) + 5 * (i - 1) + 5
-	self:SetWidth(self.newWidth)
-	self:SetPoint("LEFT", UIParent, "LEFT", -self.newWidth + 3, 100)
-	self:SetAlpha(.3)
+	if i == 1 then
+		self:Hide()
+	else	
+		-- Calculate new width of CAFrame
+		self.newWidth = 16 * (i - 1) + 5 * (i - 1) + 5
+		self:SetWidth(self.newWidth)
+		self:SetPoint("LEFT", UIParent, "LEFT", -self.newWidth + 3, 100)
+		self:SetAlpha(.3)
+	end
 end
 
 function ns:scanProfessions()
-	ns.Debug(GetNumSkillLines())
 	for i = 1, GetNumSkillLines() do
 		local skillName, _,_, rank = GetSkillLineInfo(i)
 		if professions[skillName] then
@@ -163,6 +162,10 @@ function ns:scanProfessions()
 	
 	CAframe:createButtons()
 end
+
+--[[
+--	@ Events
+--]]
 
 ns:RegisterEvent("ADDON_LOADED")
 function ns:ADDON_LOADED(event, addon)
@@ -187,21 +190,12 @@ function ns:ADDON_LOADED(event, addon)
 
 	self:UnregisterEvent("ADDON_LOADED")
 	self.ADDON_LOADED = nil
-
-	if IsLoggedIn() then self:PLAYER_LOGIN() else self:RegisterEvent("PLAYER_LOGIN") end
 end
 
 ns:RegisterEvent("SKILL_LINES_CHANGED")
 function ns:SKILL_LINES_CHANGED()
-	ns.Debug("Scan from update")
 	ns:scanProfessions()
 	
 	ns:RegisterEvent("SKILL_LINES_CHANGED")
 	self.SKILL_LINES_CHANGED = nil
 end
-
-function ns:PLAYER_LOGOUT()
---	self:FlushDB()
-	-- Do anything you need to do as the player logs out
-end
-
