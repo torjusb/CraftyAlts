@@ -19,6 +19,9 @@ local professions = {
 local GameTooltip = GameTooltip
 
 local CAframe = CreateFrame("frame", "CraftyAltsFrame")
+CAframe:SetFrameStrata("MEDIUM")
+CAframe:SetFrameLevel(1)
+
 local backdrop = {
 	bgFile = "Interface/Tooltips/UI-Tooltip-Background",
 	insets = {top = 1, bottom = 1, left = 1, right = 1},
@@ -50,15 +53,24 @@ local CAframe_OnLeave = function (self)
 	CAframe:SetScript("OnUpdate", OnUpdate)
 end
 
-local button_OnClick = function (self, button, down) 
+local button_OnClick = function (self, button, down)
 	if IsShiftKeyDown() then
 		if not ChatEdit_InsertLink(self.link) then
 			ChatFrameEditBox:Show()
 			ChatEdit_InsertLink(self.link)
 		end
-	else
-		CAframe:slideIn()
-		SetItemRef(self.link:match("|H([^|]+)"))
+	else				
+		if self.link then		
+			SetItemRef(self.link:match("|H([^|]+)"))
+		else
+			-- Links are usually nil on login for new characters, so we fetch it again
+			self.link = select(2, GetSpellLink(self.profession))
+			ns.db[ns.factionrealm][ns.char][self.profession].link = self.link			
+			
+			if (self.link) then
+				SetItemRef(self.link:match("|H([^|]+)"))
+			end
+		end
 	end
 end
 
@@ -70,7 +82,7 @@ local button_OnEnter = function (self, motion)
 	GameTooltip:Show()
 end
 
-local button_OnLeave = function (self)
+local button_OnLeave = function ()
 	CAframe_OnLeave()
 	
 	GameTooltip:Hide()
@@ -81,9 +93,9 @@ end
 --]]
 
 function CAframe:slideIn()
-	CAframe:ClearAllPoints()
-	CAframe:SetPoint("LEFT", UIParent, "LEFT", -self.newWidth + 3, 100)
-	CAframe:SetAlpha(.3)	
+	self:ClearAllPoints()
+	self:SetPoint("LEFT", UIParent, "LEFT", -self.newWidth + 3, 100)
+	self:SetAlpha(.3)	
 end
 
 
@@ -97,7 +109,7 @@ function CAframe:createButtons()
 		if profs then
 			-- create buttons
 			for prof, info in pairs(profs) do
-				local button = CreateFrame("button")
+				local button = self["button" .. i] or CreateFrame("button")
 				
 				button:SetHeight(16)
 				button:SetWidth(16)
@@ -105,21 +117,23 @@ function CAframe:createButtons()
 				button:SetHighlightTexture([=[Interface\Buttons\ButtonHilight-Square]=])
 				button:SetPushedTexture([=[Interface\Buttons\UI-Quickslot-Depress]=])
 								
-				button.texture = button:CreateTexture()
+				button.texture = button.texture or button:CreateTexture()
 				button.texture:SetWidth(16)
 				button.texture:SetHeight(16)
 				button.texture:SetPoint("CENTER", button)
 				
-				button:SetFrameStrata("HIGH")
+				button:SetFrameStrata("MEDIUM")
+				button:SetFrameLevel(2)
 				
-				local _,_, icon = GetSpellInfo(professions[prof])
-				button.texture:SetTexture(icon)
+				button.texture:SetTexture(select(3, GetSpellInfo(professions[prof])))
+				
 				
 				-- Profession info
 				button.link = info.link	
 				button.skill = info.rank
 				button.char = char
-				
+				button.profession = prof
+								
 				if i == 1 then
 					button:SetPoint("LEFT", self, "LEFT", 5, 0)
 				else 
@@ -147,15 +161,19 @@ function CAframe:createButtons()
 	end
 end
 
+
 function ns:scanProfessions()
 	for i = 1, GetNumSkillLines() do
 		local skillName, _,_, rank = GetSkillLineInfo(i)
+		
 		if professions[skillName] then
 			ns.db[ns.factionrealm][ns.char][skillName] = ns.db[ns.factionrealm][ns.char][skillName] or {}
 			local link = select(2, GetSpellLink(skillName))
+			
+			ns.db[ns.factionrealm][ns.char][skillName].rank = rank
+			
 			if link then
 				ns.db[ns.factionrealm][ns.char][skillName].link = link
-				ns.db[ns.factionrealm][ns.char][skillName].rank = rank
 			end
 		end
 	end
@@ -184,7 +202,8 @@ function ns:ADDON_LOADED(event, addon)
 	CAframe:EnableMouse(true)
 	CAframe:SetScript("OnEnter", CAframe_OnEnter)
 	CAframe:SetScript("OnLeave", CAframe_OnLeave)
-			
+	
+	ns:scanProfessions()
 	
 	LibStub("tekKonfig-AboutPanel").new(nil, myname) -- Make first arg nil if no parent config panel
 
@@ -192,10 +211,15 @@ function ns:ADDON_LOADED(event, addon)
 	self.ADDON_LOADED = nil
 end
 
+ns:RegisterEvent("PLAYER_ALIVE")
+function ns:PLAYER_ALIVE()
+	self:scanProfessions()
+	
+	self:UnregisterEvent("PLAYER_ALIVE")
+	self.PLAYER_ALIVE = nil
+end
+
 ns:RegisterEvent("SKILL_LINES_CHANGED")
 function ns:SKILL_LINES_CHANGED()
-	ns:scanProfessions()
-	
-	ns:RegisterEvent("SKILL_LINES_CHANGED")
-	self.SKILL_LINES_CHANGED = nil
+	self:scanProfessions()
 end
