@@ -29,6 +29,8 @@ local backdrop = {
 	edgeSize = 7, tile = true, tileSize = 16
 }
 
+local Y_POS = 0
+
 --[[
 --	@ Event handlers
 --]]
@@ -45,7 +47,7 @@ end
 local CAframe_OnEnter = function (self, motion)
 	CAframe:SetScript("OnUpdate", nil)
 	CAframe:SetAlpha(1)
-	CAframe:SetPoint("LEFT", -3, 100)
+	CAframe:SetPoint("LEFT", -3, Y_POS)
 end
 
 local CAframe_OnLeave = function (self)
@@ -94,7 +96,7 @@ end
 
 function CAframe:slideIn()
 	self:ClearAllPoints()
-	self:SetPoint("LEFT", UIParent, "LEFT", -self.newWidth + 3, 100)
+	self:SetPoint("LEFT", UIParent, "LEFT", -self.newWidth + 3, Y_POS)
 	self:SetAlpha(.3)	
 end
 
@@ -109,43 +111,45 @@ function CAframe:createButtons()
 		if profs then
 			-- create buttons
 			for prof, info in pairs(profs) do
-				local button = self["button" .. i] or CreateFrame("button")
+				if info.link or char == ns.char then
+					local button = self["button" .. i] or CreateFrame("button")
 				
-				button:SetHeight(16)
-				button:SetWidth(16)
+					button:SetHeight(16)
+					button:SetWidth(16)
 				
-				button:SetHighlightTexture([=[Interface\Buttons\ButtonHilight-Square]=])
-				button:SetPushedTexture([=[Interface\Buttons\UI-Quickslot-Depress]=])
+					button:SetHighlightTexture([=[Interface\Buttons\ButtonHilight-Square]=])
+					button:SetPushedTexture([=[Interface\Buttons\UI-Quickslot-Depress]=])
 								
-				button.texture = button.texture or button:CreateTexture()
-				button.texture:SetWidth(16)
-				button.texture:SetHeight(16)
-				button.texture:SetPoint("CENTER", button)
+					button.texture = button.texture or button:CreateTexture()
+					button.texture:SetWidth(16)
+					button.texture:SetHeight(16)
+					button.texture:SetPoint("CENTER", button)
 				
-				button:SetFrameStrata("MEDIUM")
-				button:SetFrameLevel(2)
+					button:SetFrameStrata("MEDIUM")
+					button:SetFrameLevel(2)
 				
-				button.texture:SetTexture(select(3, GetSpellInfo(professions[prof])))
+					button.texture:SetTexture(select(3, GetSpellInfo(professions[prof])))
 				
 				
-				-- Profession info
-				button.link = info.link	
-				button.skill = info.rank
-				button.char = char
-				button.profession = prof
+					-- Profession info
+					button.link = info.link	
+					button.skill = info.rank
+					button.char = char
+					button.profession = prof
 								
-				if i == 1 then
-					button:SetPoint("LEFT", self, "LEFT", 5, 0)
-				else 
-					button:SetPoint("LEFT", self["button" .. i - 1], "RIGHT", 5, 0)
-				end
+					if i == 1 then
+						button:SetPoint("LEFT", self, "LEFT", 5, 0)
+					else 
+						button:SetPoint("LEFT", self["button" .. i - 1], "RIGHT", 5, 0)
+					end
 
-				button:SetScript("OnClick", button_OnClick)
-				button:SetScript("OnEnter", button_OnEnter)
-				button:SetScript("OnLEave", button_OnLeave)
+					button:SetScript("OnClick", button_OnClick)
+					button:SetScript("OnEnter", button_OnEnter)
+					button:SetScript("OnLEave", button_OnLeave)
 				
-				self["button" .. i] = button
-				i = i + 1
+					self["button" .. i] = button
+					i = i + 1
+				end
 			end
 		end
 	end
@@ -156,7 +160,7 @@ function CAframe:createButtons()
 		-- Calculate new width of CAFrame
 		self.newWidth = 16 * (i - 1) + 5 * (i - 1) + 5
 		self:SetWidth(self.newWidth)
-		self:SetPoint("LEFT", UIParent, "LEFT", -self.newWidth + 3, 100)
+		self:SetPoint("LEFT", UIParent, "LEFT", -self.newWidth + 3, Y_POS)
 		self:SetAlpha(.3)
 	end
 end
@@ -171,7 +175,7 @@ function ns:scanProfessions()
 			local link = select(2, GetSpellLink(skillName))
 			
 			ns.db[ns.factionrealm][ns.char][skillName].rank = rank
-			
+						
 			if link then
 				ns.db[ns.factionrealm][ns.char][skillName].link = link
 			end
@@ -214,7 +218,7 @@ end
 ns:RegisterEvent("PLAYER_ALIVE")
 function ns:PLAYER_ALIVE()
 	self:scanProfessions()
-	
+		
 	self:UnregisterEvent("PLAYER_ALIVE")
 	self.PLAYER_ALIVE = nil
 end
@@ -222,4 +226,12 @@ end
 ns:RegisterEvent("SKILL_LINES_CHANGED")
 function ns:SKILL_LINES_CHANGED()
 	self:scanProfessions()
+end
+
+ns:RegisterEvent("TRADE_SKILL_UPDATE")
+function ns:TRADE_SKILL_UPDATE()
+	self:scanProfessions()
+	
+	self:UnregisterEvent("TRADE_SKILL_UPDATE")
+	self.TRADE_SKILL_UPDATE = nil
 end
