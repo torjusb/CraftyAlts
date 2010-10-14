@@ -1,9 +1,9 @@
-## Interface: 30300
+## Interface: 40000
 
 ## Title: CraftyAlts
 ## Notes: Easy access to alts professions 
 ## Author: Nifty
-## Version: 1.0
+## Version: 1.0.1
 
 ## SavedVariables: CraftyAltsDB
 

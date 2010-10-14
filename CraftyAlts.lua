@@ -167,17 +167,20 @@ end
 
 
 function ns:scanProfessions()
-	for i = 1, GetNumSkillLines() do
-		local skillName, _,_, rank = GetSkillLineInfo(i)
+	local profs = {GetProfessions()}
+	for i = 1, #profs do
+		if profs[i] then
+			local skillName,_, rank = GetProfessionInfo(profs[i])
 		
-		if professions[skillName] then
-			ns.db[ns.factionrealm][ns.char][skillName] = ns.db[ns.factionrealm][ns.char][skillName] or {}
-			local link = select(2, GetSpellLink(skillName))
+			if professions[skillName] then
+				ns.db[ns.factionrealm][ns.char][skillName] = ns.db[ns.factionrealm][ns.char][skillName] or {}
+				local link = select(2, GetSpellLink(skillName))
 			
-			ns.db[ns.factionrealm][ns.char][skillName].rank = rank
+				ns.db[ns.factionrealm][ns.char][skillName].rank = rank
 						
-			if link then
-				ns.db[ns.factionrealm][ns.char][skillName].link = link
+				if link then
+					ns.db[ns.factionrealm][ns.char][skillName].link = link
+				end
 			end
 		end
 	end
