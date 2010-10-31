@@ -1,7 +1,6 @@
 --[[
 --	@ Setup
 --]]
-
 local myname, ns = ...
 
 local professions = {
@@ -19,7 +18,7 @@ local professions = {
 local GameTooltip = GameTooltip
 
 local CAframe = CreateFrame("frame", "CraftyAltsFrame")
-CAframe:SetFrameStrata("MEDIUM")
+CAframe:SetFrameStrata("HIGH")
 CAframe:SetFrameLevel(1)
 
 local backdrop = {
@@ -29,7 +28,27 @@ local backdrop = {
 	edgeSize = 7, tile = true, tileSize = 16
 }
 
-local Y_POS = 0
+
+local mover = CreateFrame("Frame")
+local moving = false
+
+mover:SetScript("OnUpdate", function ()
+	if moving then
+		CAframe:move()
+	end
+end)
+
+CAframe:SetScript("OnMouseDown", function (self)
+	if IsShiftKeyDown() then
+		moving = true
+	end
+end)
+
+CAframe:SetScript("OnMouseUp", function (self)
+	moving = false
+	
+	CAframe:SavePosition()
+end)
 
 --[[
 --	@ Event handlers
@@ -45,9 +64,23 @@ local OnUpdate = function (self, elapsed)
 end
 
 local CAframe_OnEnter = function (self, motion)
-	CAframe:SetScript("OnUpdate", nil)
-	CAframe:SetAlpha(1)
-	CAframe:SetPoint("LEFT", -3, Y_POS)
+	self:SetScript("OnUpdate", nil)
+	self:SetAlpha(1)
+	self:ClearAllPoints()
+	
+	if (self.orientation == "VERTICAL") then
+		if self.slideWay == "UP" then
+			self:SetPoint("TOPLEFT", UIParent, "TOPLEFT", self.pos, 3)
+		else
+			self:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", self.pos, -3)
+		end
+	else
+		if self.slideWay == "LEFT" then 
+			self:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", -3, self.pos)
+		else
+			self:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT",  3, self.pos)
+		end
+	end	
 end
 
 local CAframe_OnLeave = function (self)
@@ -77,7 +110,7 @@ local button_OnClick = function (self, button, down)
 end
 
 local button_OnEnter = function (self, motion)
-	CAframe_OnEnter()
+	CAframe_OnEnter(CAframe)
 
 	GameTooltip:SetOwner(self)
 	GameTooltip:AddDoubleLine(self.char, self.skill)
@@ -93,11 +126,117 @@ end
 --[[
 --	@ Functions
 --]]
-
-function CAframe:slideIn()
+function CAframe:slideIn()	
 	self:ClearAllPoints()
-	self:SetPoint("LEFT", UIParent, "LEFT", -self.newWidth + 3, Y_POS)
-	self:SetAlpha(.3)	
+	self:SetAlpha(.3)
+		
+	if self.orientation == "VERTICAL" then
+		self:SetHeight(self.buttonLength)
+		self:SetWidth(23)
+		
+		if self.slideWay == "UP" then
+			self:SetPoint("TOPLEFT", UIParent, "TOPLEFT", self.pos, self.buttonLength - 3)
+		else
+			self:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", self.pos, -self.buttonLength + 3)
+		end
+	else
+		self:SetHeight(23)
+		self:SetWidth(self.buttonLength)
+		
+		if self.slideWay == "LEFT" then 
+			self:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", -self.buttonLength + 3, self.pos)
+		else
+			self:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", self.buttonLength - 3, self.pos)
+		end
+	end
+end
+
+function CAframe:SetOrientation(orientation)
+	self.orientation = orientation
+	
+	if (orientation == 'VERTICAL') then
+		self:SetWidth(23)
+		self:SetHeight(self.buttonLength)
+		
+		for i = 1, self.numButtons - 1 do
+			local button = self["button"..i]
+			
+			button:ClearAllPoints()
+			
+			if i == 1 then
+				button:SetPoint("TOP", self, "TOP", 0, -5)
+			else 
+				button:SetPoint("TOP", self["button" .. i - 1], "BOTTOM", 0, -5)
+			end
+		end				
+	else
+		self:SetHeight(23)
+		self:SetWidth(self.buttonLength)
+
+		for i = 1, self.numButtons - 1 do
+			local button = self["button"..i]
+			
+			button:ClearAllPoints()
+			
+			if i == 1 then
+				button:SetPoint("LEFT", self, "LEFT", 5, 0)
+			else 
+				button:SetPoint("LEFT", self["button" .. i - 1], "RIGHT", 5, 0)
+			end
+		end
+	end
+end
+
+function CAframe:SavePosition()
+	ns.db.frame = {
+		orientation = self.orientation,
+		slideWay = self.slideWay,
+		pos = self.pos		
+	}
+end
+
+function CAframe:move()
+	local curX, curY = GetCursorPosition()
+	local uiScale = UIParent:GetEffectiveScale()
+	local uiWidth, uiHeight = UIParent:GetWidth() * uiScale, UIParent:GetHeight() * uiScale
+	
+	if self.slideWay == "DOWN" or self.slideWay == "UP" then
+		if curX < 100 and curY > 100 and self.slideWay == "DOWN"
+		or curX < 100 and curY < uiHeight - 100 and self.slideWay == "UP" then
+			self:SetOrientation('HORIZONTAL')
+			self.slideWay = 'LEFT'
+		elseif curX > uiWidth - 100 and curY > 100 and self.slideWay == "DOWN"
+		or curX > uiWidth - 100 and curY < uiHeight - 100 and self.slideWay == "UP" then
+			self:SetOrientation('HORIZONTAL')
+			self.slideWay = 'RIGHT'
+		end
+	else
+		if curY < 100 and curX > 100 and self.slideWay == "LEFT"
+		or curY < 100 and curX < uiWidth - 100 and self.slideWay == "RIGHT" then
+			self:SetOrientation('VERTICAL')
+			self.slideWay = 'DOWN'
+		elseif curY > uiHeight - 100 and curX > 100 and self.slideWay == "LEFT"
+		or curY > uiHeight - 100 and curX < uiWidth - 100 and self.slideWay == "RIGHT" then
+			self:SetOrientation('VERTICAL')
+			self.slideWay = 'UP'
+		end
+	end
+		
+	self:ClearAllPoints()
+	if self.slideWay == 'DOWN' then
+ 		self:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", curX, -3)
+		self.pos = curX
+	elseif self.slideWay == 'UP' then
+		self:SetPoint("TOPLEFT", UIParent, "TOPLEFT", curX, 3)
+		self.pos = curX
+	elseif self.slideWay == 'LEFT' then
+		self:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", -3, curY)
+		self.pos = curY
+	else
+		self:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", 3, curY)
+		self.pos = curY
+	end
+		
 end
 
 
@@ -125,11 +264,10 @@ function CAframe:createButtons()
 					button.texture:SetHeight(16)
 					button.texture:SetPoint("CENTER", button)
 				
-					button:SetFrameStrata("MEDIUM")
+					button:SetFrameStrata("HIGH")
 					button:SetFrameLevel(2)
 				
 					button.texture:SetTexture(select(3, GetSpellInfo(professions[prof])))
-				
 				
 					-- Profession info
 					button.link = info.link	
@@ -138,9 +276,9 @@ function CAframe:createButtons()
 					button.profession = prof
 								
 					if i == 1 then
-						button:SetPoint("LEFT", self, "LEFT", 5, 0)
+						button:SetPoint("TOP", self, "TOP", 0, -5)
 					else 
-						button:SetPoint("LEFT", self["button" .. i - 1], "RIGHT", 5, 0)
+						button:SetPoint("TOP", self["button" .. i - 1], "BOTTOM", 0, -5)
 					end
 
 					button:SetScript("OnClick", button_OnClick)
@@ -158,10 +296,13 @@ function CAframe:createButtons()
 		self:Hide()
 	else	
 		-- Calculate new width of CAFrame
-		self.newWidth = 16 * (i - 1) + 5 * (i - 1) + 5
-		self:SetWidth(self.newWidth)
-		self:SetPoint("LEFT", UIParent, "LEFT", -self.newWidth + 3, Y_POS)
-		self:SetAlpha(.3)
+		self.buttonLength = 16 * (i - 1) + 5 * (i - 1) + 5
+		self.numButtons = i
+		self.slideWay = ns.db.frame.slideWay
+		self.pos = ns.db.frame.pos
+		self:SetOrientation(ns.db.frame.orientation)
+		
+		self:slideIn()
 	end
 end
 
@@ -198,7 +339,7 @@ function ns:ADDON_LOADED(event, addon)
 	self:InitDB()
 	
 	CAframe:SetHeight(23)
-	CAframe:SetWidth(100)
+	CAframe:SetWidth(23)
 
 	CAframe:SetBackdrop(backdrop)
 	CAframe:SetBackdropColor(0, 0, 0, .7)
@@ -212,8 +353,6 @@ function ns:ADDON_LOADED(event, addon)
 	
 	ns:scanProfessions()
 	
-	LibStub("tekKonfig-AboutPanel").new(nil, myname) -- Make first arg nil if no parent config panel
-
 	self:UnregisterEvent("ADDON_LOADED")
 	self.ADDON_LOADED = nil
 end
@@ -231,10 +370,10 @@ function ns:SKILL_LINES_CHANGED()
 	self:scanProfessions()
 end
 
-ns:RegisterEvent("TRADE_SKILL_UPDATE")
-function ns:TRADE_SKILL_UPDATE()
-	self:scanProfessions()
-	
-	self:UnregisterEvent("TRADE_SKILL_UPDATE")
-	self.TRADE_SKILL_UPDATE = nil
-end
+-- ns:RegisterEvent("TRADE_SKILL_UPDATE")
+-- function ns:TRADE_SKILL_UPDATE()
+-- 	self:scanProfessions()
+-- 	
+-- 	self:UnregisterEvent("TRADE_SKILL_UPDATE")
+-- 	self.TRADE_SKILL_UPDATE = nil
+-- end
